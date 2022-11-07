@@ -6,7 +6,7 @@
 #define BYTES_PER_PAGE 1024
 #define N_THREADS 1
 #define FILENAME "/home/gilmar/CLionProjects/untitled/history.txt"
-#define LAST_PAGE 3726
+#define LAST_PAGE 62544
 
 struct Pair {
     char key[256];
@@ -37,8 +37,6 @@ static int n_words_to_count = 5;
 struct timeval t1, t2;
 
 int getWordIndex(char* word) {
-    printf("%s\n", word);
-
     for (int i = 0; i < n_words_to_count; i++) {
         if (!strcmp(words_to_count[i].key, word))
             return i;
