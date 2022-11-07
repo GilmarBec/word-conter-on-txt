@@ -5,8 +5,8 @@
 
 #define BYTES_PER_PAGE 1024
 #define N_THREADS 1
-#define FILENAME "/home/gilmar/CLionProjects/untitled/history.txt"
-#define LAST_PAGE 62544
+#define FILENAME "/home/gilmar/CLionProjects/untitled/History137KB.txt"
+#define LAST_PAGE 137
 
 struct Pair {
     char key[256];
@@ -36,7 +36,9 @@ static int n_words_to_count = 5;
 
 struct timeval t1, t2;
 
-int getWordIndex(char* word) {
+int getWordIndex(void* word) {
+    printf("%s\n", (char *) word);
+
     for (int i = 0; i < n_words_to_count; i++) {
         if (!strcmp(words_to_count[i].key, word))
             return i;
@@ -45,15 +47,17 @@ int getWordIndex(char* word) {
     return -1;
 }
 
+/*
 void addWord(const char* word, int index) {
     struct Pair word_to_count = {
-            .key =  word,
+            .key =  (char) word,
             .value = 0,
     };
 
     words_to_count[index] = word_to_count;
     n_words_to_count += 1;
 }
+*/
 
 void sum_words(int id) {
     FILE* file = fopen(FILENAME, "r");
@@ -108,7 +112,7 @@ int main() {
 
     double t_total = (t2.tv_sec - t1.tv_sec) + ((t2.tv_usec - t1.tv_usec) / 1000000.0);
     printf("\n=========================================\n");
-    printf("Tempo total de execução = %f\n", t_total);
+    printf("Total Time = %f\n", t_total);
     printf("=========================================\n");
     return 0;
 }
