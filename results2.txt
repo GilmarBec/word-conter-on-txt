@@ -1,0 +1,85 @@
+Simples(sem threads)
+
+Count love: 33833
+Count Shrek: 165349
+Count SHREK: 230217
+Count onion: 5484
+Count king: 7361
+
+=========================================
+Total Time = 1.093574
+=========================================
+
+
+2 Thread
+
+Count love: 33841
+Count Shrek: 165354
+Count SHREK: 230221
+Count onion: 5486
+Count king: 7361
+
+=========================================
+Total Time = 0.527475
+=========================================
+
+4 Thread
+
+Count love: 33843
+Count Shrek: 165374
+Count SHREK: 230235
+Count onion: 5485
+Count king: 7365
+
+=========================================
+Total Time = 0.316838
+=========================================
+
+6 Thread
+
+Count love: 33854
+Count Shrek: 165368
+Count SHREK: 230257
+Count onion: 5485
+Count king: 7367
+
+=========================================
+Total Time = 0.281634
+=========================================
+
+8 Thread
+
+Count love: 33847
+Count Shrek: 165367
+Count SHREK: 230260
+Count onion: 5485
+Count king: 7367
+
+=========================================
+Total Time = 0.240397
+=========================================
+
+10 Thread
+
+Count love: 33844
+Count Shrek: 165367
+Count SHREK: 230263
+Count onion: 5485
+Count king: 7366
+
+=========================================
+Total Time = 0.183920
+=========================================
+
+12 Thread
+
+Count love: 33848
+Count Shrek: 165379
+Count SHREK: 230273
+Count onion: 5486
+Count king: 7366
+
+=========================================
+Total Time = 0.167771
+=========================================
+

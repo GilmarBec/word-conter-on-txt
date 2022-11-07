@@ -1,12 +1,15 @@
+// gcc -fopenmp ex5.c -o ex5
 #include <stdio.h>
 #include <string.h>
 #include <sys/time.h>
 #include <ctype.h>
+#include <pthread.h>
+#include <omp.h>
 
 #define BYTES_PER_PAGE 1024
-#define N_THREADS 1
-#define FILENAME "/home/gilmar/CLionProjects/untitled/History137KB.txt"
-#define LAST_PAGE 137
+#define N_THREADS 12
+#define FILENAME "/home/gilmar/CLionProjects/untitled/History64MB.txt"
+#define LAST_PAGE 62544
 
 struct Pair {
     char key[256];
@@ -33,11 +36,12 @@ static struct Pair words_to_count[] = {
 };
 
 static int n_words_to_count = 5;
+pthread_mutex_t mutex;
 
 struct timeval t1, t2;
 
 int getWordIndex(void* word) {
-    printf("%s\n", (char *) word);
+//    printf("%s\n", (char *) word);
 
     for (int i = 0; i < n_words_to_count; i++) {
         if (!strcmp(words_to_count[i].key, word))
@@ -50,7 +54,7 @@ int getWordIndex(void* word) {
 /*
 void addWord(const char* word, int index) {
     struct Pair word_to_count = {
-            .key =  (char) word,
+            .key =   word,
             .value = 0,
     };
 
@@ -62,7 +66,7 @@ void addWord(const char* word, int index) {
 void sum_words(int id) {
     FILE* file = fopen(FILENAME, "r");
 
-    int thread_last_page = LAST_PAGE / N_THREADS;
+    int thread_last_page = (LAST_PAGE / N_THREADS) + 1;
 
     for (int current_page = 0; current_page < thread_last_page; ++current_page) {
         int offset = BYTES_PER_PAGE * (id + (current_page * N_THREADS));
@@ -86,14 +90,19 @@ void sum_words(int id) {
             memset(word, '\0', sizeof word);
 
             if(word_index == -1) {
-                if(page[i] == '\000')
-                    break;
+                if(page[i] == '\000') break;
+
                 continue;
             }
 
+            pthread_mutex_lock(&mutex);
+//            printf("thread %i lock", id);
             words_to_count[word_index].value++;
-            if(page[i] == '\000')
-                break;
+//            printf("thread %i unlock\n", id);
+
+            pthread_mutex_unlock(&mutex);
+
+            if(page[i] == '\000') break;
         }
     }
 
@@ -101,8 +110,13 @@ void sum_words(int id) {
 }
 
 int main() {
+    omp_set_num_threads(N_THREADS);
     gettimeofday(&t1, NULL);
-    sum_words(0);
+
+    #pragma omp parallel for
+    for (int i = 0; i < N_THREADS; i++)
+        sum_words(i);
+
     gettimeofday(&t2, NULL);
 
     for (int i = 0; i < n_words_to_count; ++i) {
