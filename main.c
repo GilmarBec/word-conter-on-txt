@@ -1,15 +1,18 @@
-// gcc -fopenmp ex5.c -o ex5
+// mpicc main.c -o main; mpiexec --hostfile hostfile -np 8 ./main
 #include <stdio.h>
 #include <string.h>
 #include <sys/time.h>
 #include <ctype.h>
 #include <pthread.h>
 #include <omp.h>
+#include <mpi.h>
 
+#define true 1
+#define false 0
 #define BYTES_PER_PAGE 1024
-#define N_THREADS 12
-#define FILENAME "/home/gilmar/CLionProjects/untitled/History64MB.txt"
-#define LAST_PAGE 62544
+#define FILENAME "/home/gilmar/CLionProjects/untitled/History69KB.txt"
+#define TEXT_SIZE 69763
+#define DEBUG false
 
 struct Pair {
     char key[256];
@@ -36,47 +39,48 @@ static struct Pair words_to_count[] = {
 };
 
 static int n_words_to_count = 5;
-pthread_mutex_t mutex;
 
 struct timeval t1, t2;
 
-int getWordIndex(void* word) {
-//    printf("%s\n", (char *) word);
-
-    for (int i = 0; i < n_words_to_count; i++) {
-        if (!strcmp(words_to_count[i].key, word))
-            return i;
-    }
-
-    return -1;
+#define SEND {\
+    int receiver = 0; \
+    MPI_Send(&word_counters, n_words_to_count, MPI_INT, receiver, 0, MPI_COMM_WORLD);\
 }
 
-/*
-void addWord(const char* word, int index) {
-    struct Pair word_to_count = {
-            .key =   word,
-            .value = 0,
-    };
-
-    words_to_count[index] = word_to_count;
-    n_words_to_count += 1;
+#define RECEIVE {\
+    for(int sender_i = world_size - 1; sender_i > 0; sender_i--){ \
+        MPI_Recv(&word_counters, n_words_to_count, MPI_INT, sender_i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); \
+        for (int i = 0; i < n_words_to_count; i++)\
+            words_to_count[i].value += word_counters[i];\
+    }\
 }
-*/
 
-void sum_words(int id) {
+int main() {
+    gettimeofday(&t1, NULL);
+    MPI_Init(NULL, NULL);                       // INIT
+    int world_size, rank;
+
+    MPI_Comm_size(MPI_COMM_WORLD, &world_size); // N of processes
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);       // MPI id
     FILE* file = fopen(FILENAME, "r");
 
-    int thread_last_page = (LAST_PAGE / N_THREADS) + 1;
-
-    for (int current_page = 0; current_page < thread_last_page; ++current_page) {
-        int offset = BYTES_PER_PAGE * (id + (current_page * N_THREADS));
+    for (int current_page = 0; true; ++current_page) {
+        int offset = BYTES_PER_PAGE * (rank + (current_page * world_size));
         char page[BYTES_PER_PAGE];
 
         if (offset > 0) {
+            if (offset >= TEXT_SIZE)
+                break;
             fseek((FILE *) file, offset, SEEK_SET);
         }
 
         fgets(page, BYTES_PER_PAGE, (FILE *) file);
+        char text[BYTES_PER_PAGE] = "";
+        for (int i = 0; i < BYTES_PER_PAGE; ++i) {
+            char cToStr[2] = {page[i], '\000'};
+            strcat(text, cToStr);
+        }
+        if (DEBUG) printf("Rank[%i] Page[%i - %i]: %s\n", rank, offset, current_page, text);
 
         char word[255] = "";
         for (int i = 0; i < BYTES_PER_PAGE; i++) {
@@ -86,7 +90,14 @@ void sum_words(int id) {
                 continue;
             }
 
-            int word_index = getWordIndex(&word);
+            // Word index
+            int word_index = -1;
+            for (int j = 0; j < n_words_to_count; j++) {
+                if (!strcmp(words_to_count[j].key, word))
+                    word_index = j;
+            }
+            //Fim Word index
+
             memset(word, '\0', sizeof word);
 
             if(word_index == -1) {
@@ -95,38 +106,38 @@ void sum_words(int id) {
                 continue;
             }
 
-            pthread_mutex_lock(&mutex);
-//            printf("thread %i lock", id);
             words_to_count[word_index].value++;
-//            printf("thread %i unlock\n", id);
-
-            pthread_mutex_unlock(&mutex);
 
             if(page[i] == '\000') break;
         }
     }
 
+    int word_counters[n_words_to_count];
+    if (rank != 0) {
+        for (int word_counter_index = 0; word_counter_index < n_words_to_count; word_counter_index++)
+            word_counters[word_counter_index] = words_to_count[word_counter_index].value;
+
+        SEND
+    } else {
+        RECEIVE
+    }
+
     fclose((FILE *) file);
-}
-
-int main() {
-    omp_set_num_threads(N_THREADS);
-    gettimeofday(&t1, NULL);
-
-    #pragma omp parallel for
-    for (int i = 0; i < N_THREADS; i++)
-        sum_words(i);
+    MPI_Finalize();                             // End MPI process
 
     gettimeofday(&t2, NULL);
 
-    for (int i = 0; i < n_words_to_count; ++i) {
-        struct Pair word = words_to_count[i];
-        printf("Count %s: %i\n", word.key, word.value);
-    }
+    if (rank != 0)
+        return 0;
 
     double t_total = (t2.tv_sec - t1.tv_sec) + ((t2.tv_usec - t1.tv_usec) / 1000000.0);
     printf("\n=========================================\n");
     printf("Total Time = %f\n", t_total);
     printf("=========================================\n");
+
+    for (int i = 0; i < n_words_to_count; ++i) {
+        struct Pair word = words_to_count[i];
+        printf("Count %s: %i\n", word.key, word.value);
+    }
     return 0;
 }
