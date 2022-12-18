@@ -177,32 +177,36 @@ static struct Pair words_to_count[] = {
 }
 };
 
-static int n_words_to_count = 50;
+static int n_words_to_count = 10;
 
 struct timeval t1, t2;
 
 #define SEND {\
     int receiver = 0; \
-    MPI_Send(&word_counters, n_words_to_count, MPI_INT, receiver, 0, MPI_COMM_WORLD);\
+    MPI_Bcast(&word_counters, n_words_to_count, MPI_INT, rank, MPI_COMM_WORLD);\
 }
 
 #define RECEIVE {\
-    for(int sender_i = world_size - 1; sender_i > 0; sender_i--){ \
-        MPI_Recv(&word_counters, n_words_to_count, MPI_INT, sender_i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); \
-        for (int i = 0; i < n_words_to_count; i++)\
+    for(int sender_i = 0; sender_i < world_size; sender_i++){ \
+        if(sender_i == rank) {\
+            continue;\
+        }\
+        MPI_Bcast(&word_counters, n_words_to_count, MPI_INT, sender_i, MPI_COMM_WORLD);\
+        for (i = 0; i < n_words_to_count; i++)\
             words_to_count[i].value += word_counters[i];\
     }\
 }
+//MPI_Barrier(MPI_COMM_WORLD);
 
 int main(int argc, char **argv) {
-    int j;
+    int i, j;
     sscanf(argv[1], "%d", &j);
-    for (int i = 0; i < 256; ++i)
+    for (i = 0; i < 256; ++i)
         file_name[i] = possible_files[j][i];
     if (j == 1) TEXT_SIZE = 64042434;
 
-    gettimeofday(&t1, NULL);
     MPI_Init(NULL, NULL);                       // INIT
+    gettimeofday(&t1, NULL);
     int world_size, rank;
 
     MPI_Comm_size(MPI_COMM_WORLD, &world_size); // N of processes
@@ -221,14 +225,14 @@ int main(int argc, char **argv) {
 
         fgets(page, BYTES_PER_PAGE, (FILE *) file);
         char text[BYTES_PER_PAGE] = "";
-        for (int i = 0; i < BYTES_PER_PAGE; ++i) {
+        for (i = 0; i < BYTES_PER_PAGE; ++i) {
             char cToStr[2] = {page[i], '\000'};
             strcat(text, cToStr);
         }
         DEBUG printf("Rank[%i] Page[%i - %i]: %s\n", rank, offset, current_page, text);
 
         char word[255] = "";
-        for (int i = 0; i < BYTES_PER_PAGE; i++) {
+        for (i = 0; i < BYTES_PER_PAGE; i++) {
             if (isalpha(page[i])) { // Adiciona caracteres a palavra
                 char cToStr[2] = {page[i], '\000'};
                 strcat(word, cToStr);
@@ -237,7 +241,7 @@ int main(int argc, char **argv) {
 
             // Word index
             int word_index = -1;
-            for (int j = 0; j < n_words_to_count; j++) {
+            for (j = 0; j < n_words_to_count; j++) {
                 if (!strcmp(words_to_count[j].key, word))
                     word_index = j;
             }
@@ -258,31 +262,33 @@ int main(int argc, char **argv) {
     }
 
     int word_counters[n_words_to_count];
-    if (rank != 0) {
-        for (int word_counter_index = 0; word_counter_index < n_words_to_count; word_counter_index++)
-            word_counters[word_counter_index] = words_to_count[word_counter_index].value;
 
-        SEND
-    } else {
-        RECEIVE
-    }
+    for (int word_counter_index = 0; word_counter_index < n_words_to_count; word_counter_index++)
+        word_counters[word_counter_index] = words_to_count[word_counter_index].value;
+
+    SEND
+    RECEIVE
 
     fclose((FILE *) file);
     MPI_Finalize();                             // End MPI process
 
     gettimeofday(&t2, NULL);
 
-    if (rank != 0)
-        return 0;
-
     double t_total = (t2.tv_sec - t1.tv_sec) + ((t2.tv_usec - t1.tv_usec) / 1000000.0);
     printf("\n=========================================\n");
     printf("Total Time = %f\n", t_total);
     printf("=========================================\n");
 
-    for (int i = 0; i < n_words_to_count; ++i) {
+    char msg[5000] = "";
+    sprintf(msg, "RANK[%i] \n\n", rank);
+
+    for (i = 0; i < n_words_to_count; ++i) {
         struct Pair word = words_to_count[i];
-        printf("Count %s: %i\n", word.key, word.value);
+        char tmp[300] = "";
+        sprintf(tmp, "Count %s: %i\n", word.key, word.value);
+        strcat(msg, tmp);
     }
+
+    printf("%s", msg);
     return 0;
 }
