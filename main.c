@@ -10,9 +10,13 @@
 #define true 1
 #define false 0
 #define BYTES_PER_PAGE 1024
-#define FILENAME "/home/gilmar/CLionProjects/untitled/History69KB.txt"
-#define TEXT_SIZE 69763
-#define DEBUG false
+//#define TEXT_SIZE 69763
+#define IS_DEBUG_ON false
+#define DEBUG if (IS_DEBUG_ON)
+
+static char possible_files[2][256] = {"/home/gilmar/CLionProjects/untitled/History137KB.txt", "/home/gilmar/CLionProjects/untitled/History64MB.txt"};
+static int TEXT_SIZE = 139526;
+static char file_name[256];
 
 struct Pair {
     char key[256];
@@ -35,10 +39,145 @@ static struct Pair words_to_count[] = {
 },{
         .key =  "king",
         .value = 0,
+},{
+    .key = "locked",
+    .value = 0,
+},{
+        .key = "dragon",
+        .value = 0,
+},{
+        .key = "kiss",
+        .value = 0,
+},{
+        .key = "ogre",
+        .value = 0,
+},{
+        .key = "town",
+        .value = 0,
+},{
+        .key = "eyes",
+        .value = 0,
+},{
+        .key = "men",
+        .value = 0,
+},{
+        .key = "torches",
+        .value = 0,
+},{
+        .key = "down",
+        .value = 0,
+},{
+        .key = "Fairy",
+        .value = 0,
+},{
+        .key = "tale",
+        .value = 0,
+},{
+        .key = "creatures",
+        .value = 0,
+},{
+        .key = "guard",
+        .value = 0,
+},{
+        .key = "cages",
+        .value = 0,
+},{
+        .key = "farmer",
+        .value = 0,
+},{
+        .key = "people",
+        .value = 0,
+},{
+        .key = "GUARD",
+        .value = 0,
+},{
+        .key = "rope",
+        .value = 0,
+},{
+        .key = "have",
+        .value = 0,
+},{
+        .key = "little",
+        .value = 0,
+},{
+        .key = "chance",
+        .value = 0,
+},{
+        .key = "change",
+        .value = 0,
+},{
+        .key = "Please",
+        .value = 0,
+},{
+        .key = "Donkey",
+        .value = 0,
+},{
+        .key = "Guards",
+        .value = 0,
+},{
+        .key = "shut",
+        .value = 0,
+},{
+        .key = "want",
+        .value = 0,
+},{
+        .key = "really",
+        .value = 0,
+},{
+        .key = "freak",
+        .value = 0,
+},{
+        .key = "Farquaad",
+        .value = 0,
+},{
+        .key = "lord",
+        .value = 0,
+},{
+        .key = "Lord",
+        .value = 0,
+},{
+        .key = "GINGERBREAD",
+        .value = 0,
+},{
+        .key = "Gingerbread",
+        .value = 0,
+},{
+        .key = "field",
+        .value = 0,
+},{
+        .key = "line",
+        .value = 0,
+},{
+        .key = "keep",
+        .value = 0,
+},{
+        .key = "champion",
+        .value = 0,
+},{
+        .key = "cheers",
+        .value = 0,
+},{
+        .key = "larger",
+        .value = 0,
+},{
+        .key = "roll",
+        .value = 0,
+},{
+        .key = "beer",
+        .value = 0,
+},{
+        .key = "rude",
+        .value = 0,
+},{
+        .key = "ROBIN",
+        .value = 0,
+},{
+        .key = "boys",
+        .value = 0,
 }
 };
 
-static int n_words_to_count = 5;
+static int n_words_to_count = 50;
 
 struct timeval t1, t2;
 
@@ -55,14 +194,20 @@ struct timeval t1, t2;
     }\
 }
 
-int main() {
+int main(int argc, char **argv) {
+    int j;
+    sscanf(argv[1], "%d", &j);
+    for (int i = 0; i < 256; ++i)
+        file_name[i] = possible_files[j][i];
+    if (j == 1) TEXT_SIZE = 64042434;
+
     gettimeofday(&t1, NULL);
     MPI_Init(NULL, NULL);                       // INIT
     int world_size, rank;
 
     MPI_Comm_size(MPI_COMM_WORLD, &world_size); // N of processes
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);       // MPI id
-    FILE* file = fopen(FILENAME, "r");
+    FILE* file = fopen(file_name, "r");
 
     for (int current_page = 0; true; ++current_page) {
         int offset = BYTES_PER_PAGE * (rank + (current_page * world_size));
@@ -80,7 +225,7 @@ int main() {
             char cToStr[2] = {page[i], '\000'};
             strcat(text, cToStr);
         }
-        if (DEBUG) printf("Rank[%i] Page[%i - %i]: %s\n", rank, offset, current_page, text);
+        DEBUG printf("Rank[%i] Page[%i - %i]: %s\n", rank, offset, current_page, text);
 
         char word[255] = "";
         for (int i = 0; i < BYTES_PER_PAGE; i++) {
