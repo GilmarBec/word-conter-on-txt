@@ -6,6 +6,7 @@
 #include <pthread.h>
 #include <omp.h>
 #include <mpi.h>
+#include <stdlib.h>
 
 #define true 1
 #define false 0
@@ -14,7 +15,7 @@
 #define IS_DEBUG_ON false
 #define DEBUG if (IS_DEBUG_ON)
 
-static char possible_files[2][256] = {"/home/gilmar/CLionProjects/untitled/History137KB.txt", "/home/gilmar/CLionProjects/untitled/History64MB.txt"};
+static char possible_files[2][256] = {"History137KB.txt", "History64MB.txt"};
 static int TEXT_SIZE = 139526;
 static char file_name[256];
 
@@ -206,13 +207,31 @@ int main(int argc, char **argv) {
     if (j == 1) TEXT_SIZE = 64042434;
 
     MPI_Init(NULL, NULL);                       // INIT
+
     gettimeofday(&t1, NULL);
     int world_size, rank;
 
     MPI_Comm_size(MPI_COMM_WORLD, &world_size); // N of processes
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);       // MPI id
-    FILE* file = fopen(file_name, "r");
+    MPI_File	file;
+    MPI_Status	status;
+    printf("text\n");
 
+    //int bufsize = TEXT_SIZE/world_size;
+    //int nints = bufsize;
+    //char buf[BYTES_PER_PAGE] = "";
+    //memset(buf, '\0', sizeof buf);
+//
+    //MPI_File_open(MPI_COMM_WORLD, file_name, MPI_MODE_RDONLY, MPI_INFO_NULL, &file);
+    //MPI_File_seek(file, rank * bufsize, MPI_SEEK_SET);
+    //MPI_File_read(file, buf, 1, MPI_BYTE, &status);
+    //MPI_File_read(file, buf, 1, MPI_BYTE, &status);
+    //MPI_File_close(&file);
+    //printf("text[rank-%i]:%s\n", rank, buf);
+    //MPI_Finalize();                             // End MPI process
+    //exit(0);
+
+    MPI_File_open(MPI_COMM_WORLD, file_name, MPI_MODE_RDONLY, MPI_INFO_NULL, &file);
     for (int current_page = 0; true; ++current_page) {
         int offset = BYTES_PER_PAGE * (rank + (current_page * world_size));
         char page[BYTES_PER_PAGE];
@@ -220,10 +239,10 @@ int main(int argc, char **argv) {
         if (offset > 0) {
             if (offset >= TEXT_SIZE)
                 break;
-            fseek((FILE *) file, offset, SEEK_SET);
+            MPI_File_seek(file, offset, MPI_SEEK_SET);
         }
 
-        fgets(page, BYTES_PER_PAGE, (FILE *) file);
+        MPI_File_read(file, page, BYTES_PER_PAGE, MPI_BYTE, &status);
         char text[BYTES_PER_PAGE] = "";
         for (i = 0; i < BYTES_PER_PAGE; ++i) {
             char cToStr[2] = {page[i], '\000'};
@@ -269,7 +288,7 @@ int main(int argc, char **argv) {
     SEND
     RECEIVE
 
-    fclose((FILE *) file);
+    MPI_File_close(&file);
     MPI_Finalize();                             // End MPI process
 
     gettimeofday(&t2, NULL);
