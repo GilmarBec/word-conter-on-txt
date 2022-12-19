@@ -197,7 +197,6 @@ struct timeval t1, t2;
             words_to_count[i].value += word_counters[i];\
     }\
 }
-//MPI_Barrier(MPI_COMM_WORLD);
 
 int main(int argc, char **argv) {
     int i, j;
@@ -215,21 +214,6 @@ int main(int argc, char **argv) {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);       // MPI id
     MPI_File	file;
     MPI_Status	status;
-    printf("text\n");
-
-    //int bufsize = TEXT_SIZE/world_size;
-    //int nints = bufsize;
-    //char buf[BYTES_PER_PAGE] = "";
-    //memset(buf, '\0', sizeof buf);
-//
-    //MPI_File_open(MPI_COMM_WORLD, file_name, MPI_MODE_RDONLY, MPI_INFO_NULL, &file);
-    //MPI_File_seek(file, rank * bufsize, MPI_SEEK_SET);
-    //MPI_File_read(file, buf, 1, MPI_BYTE, &status);
-    //MPI_File_read(file, buf, 1, MPI_BYTE, &status);
-    //MPI_File_close(&file);
-    //printf("text[rank-%i]:%s\n", rank, buf);
-    //MPI_Finalize();                             // End MPI process
-    //exit(0);
 
     MPI_File_open(MPI_COMM_WORLD, file_name, MPI_MODE_RDONLY, MPI_INFO_NULL, &file);
     for (int current_page = 0; true; ++current_page) {
